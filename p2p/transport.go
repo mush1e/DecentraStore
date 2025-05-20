@@ -1,10 +1,12 @@
 package p2p
 
-// Peer represents a remote node in the network.
-type Peer interface{}
+// Peer is an interface that
+// represents a remote node
+type Peer interface {
+}
 
-// Transport handles communication between nodes in the network.
-// This can be TCP, UDP, Websockets etc
+// Handles communication between
+// 2 nodes in a network
+// TCP, UDP, WebSockets etc
 type Transport interface {
-	ListenAndAccept() error
 }

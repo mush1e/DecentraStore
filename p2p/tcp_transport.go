@@ -3,7 +3,6 @@ package p2p
 import (
 	"fmt"
 	"net"
-	"sync"
 )
 
 // TCPPeer Represents a remote node
@@ -25,6 +24,11 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 	}
 }
 
+// Close implements the peer interface
+func (p *TCPPeer) Close() error {
+	return p.conn.Close()
+}
+
 type TCPTransportOpts struct {
 	ListenAddr    string
 	HandshakeFunc HandshakeFunc
@@ -33,16 +37,22 @@ type TCPTransportOpts struct {
 type TCPTransport struct {
 	TCPTransportOpts
 	listener net.Listener
-
-	mu    sync.RWMutex
-	peers map[net.Addr]Peer
+	rpcChan  chan RPC
 }
 
 // Constructor to generate new TCP Transport
 func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 	return &TCPTransport{
 		TCPTransportOpts: opts,
+		rpcChan:          make(chan RPC),
 	}
+}
+
+// Consume implements the Transport interface which
+// returns a read only channel to read incoming messages
+// recieved from another peer in the network
+func (t *TCPTransport) Consume() <-chan RPC {
+	return t.rpcChan
 }
 
 func (t *TCPTransport) ListenAndAccept() error {
@@ -76,15 +86,15 @@ func (t *TCPTransport) handleConnection(conn net.Conn) {
 		return
 	}
 
-	msg := &Message{}
+	rpc := RPC{}
 	// read loop
 	for {
-		if err := t.Decoder.Decode(conn, msg); err != nil {
+		if err := t.Decoder.Decode(conn, &rpc); err != nil {
 			fmt.Printf("TCP error : %s\n", err)
 			conn.Close()
 			return
 		}
-		msg.From = conn.RemoteAddr()
-		fmt.Printf("message: %+v\n", msg)
+		rpc.From = conn.RemoteAddr()
+		t.rpcChan <- rpc
 	}
 }

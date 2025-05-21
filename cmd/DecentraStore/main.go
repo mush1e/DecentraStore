@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/mush1e/DecentraStore/p2p"
@@ -15,6 +16,13 @@ func main() {
 	}
 
 	tr := p2p.NewTCPTransport(opts)
+
+	go func() {
+		for {
+			msg := <-tr.Consume()
+			fmt.Printf("%+v\n", msg)
+		}
+	}()
 
 	if err := tr.ListenAndAccept(); err != nil {
 		log.Fatal(err)
